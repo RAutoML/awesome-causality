@@ -7,18 +7,23 @@ import matplotlib.pyplot as plt
 
 from CausalDataGenerator import CausalDataGenerator
 
+RESOURCE_PATH = '/Users/narekghukasyan/Desktop'
 GRAPH_SIZE = 10
 SAMPLE_SIZE = 1000
-generator = CausalDataGenerator(nodeCount= GRAPH_SIZE, sampleSize= SAMPLE_SIZE)
-df = generator.generateDataFrame()
 
-print("WITH TREATMENT")
-print(df[0].head())
+def sigmoid(self, row): # [sigmoid(a1), sigmoid(a2), ... ]  <- X[i] = [a1, a2, .. ]
+    return 1/(1 + np.exp(-row))
 
-print("########################################################################")
-print("########################################################################")
+def same(self, X):
+    return X
 
-print("WITHOUT TREATMENT")
-print(df[1].head())
+generator = CausalDataGenerator(resourcePath = RESOURCE_PATH, nodeCount= GRAPH_SIZE, sampleSize= SAMPLE_SIZE)
 
-generator.drawGeneratedGraph()
+df = generator.generateDataFrame(np.square, generator.sigmoid)
+# t = generator.generateDataFrame()
+# g = generator.generateTanhDataFrame()
+
+print("X")
+print(df.head())
+# print("########################################################################")
+# print("########################################################################")

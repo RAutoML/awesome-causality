@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
+import os
+import uuid
+import math
 
 class CausalDataGenerator:
     """
@@ -18,7 +21,7 @@ class CausalDataGenerator:
         modified adjacency matrix
         if node j causes node i (j->i), Xi is from PAj, then in linear Xi = f(PAj, Ui) coefficent of Xj is coeffMatrix[i,j]
     X_withTreatment : ndarray
-        rows of this matrix are variables, generated with linear equations, with generateX function and with treatment T = [11...1]
+        rows of this matrix are variables, generated with linear equations, with generateCausalX function and with treatment T = [11...1]
     X_without Treatment : ndarray
         matrix like X_withTreatment, but here we set T = [00...0]
     diTree : DiGraph
@@ -27,10 +30,12 @@ class CausalDataGenerator:
         topologically sorted nodes of diTree (cause we want to generate some Xi before its descendants)
     """
 
-    def __init__(self, nodeCount = 5, sampleSize = 10):
+    def __init__(self,resourcePath, nodeCount = 5, sampleSize = 10):
+        self.resourcePath = resourcePath
         self.nodeCount = nodeCount
         self.sampleSize = sampleSize
         self.coeffMatrix = np.zeros((self.nodeCount, self.nodeCount))
+        self.X = np.zeros((nodeCount, sampleSize))
         self.X_withTreatment = np.zeros((nodeCount, sampleSize))
         self.X_withoutTreatment = np.zeros((nodeCount, sampleSize))
 
@@ -38,22 +43,17 @@ class CausalDataGenerator:
         """
         Generates a directional tree
         """
-        G = nx.random_tree(self.nodeCount)
+        G = nx.random_tree(self.nodeCount) # dag X1->..->X1
         H = nx.DiGraph([(u,v) for (u,v) in G.edges() if u<v])
+
         self.diTree = H
         return H
 
-    def drawGeneratedGraph(self):
+    def drawGeneratedGraph(self, path):
         #Plots diTree
-
         nx.draw(self.diTree, with_labels = True)
-        plt.show()
-
-    # def drawGeneratedGraphWithGraphviz(self):
-    #     A = nx.to_agraph(self.diTree)
-    #     A.layout('dot', args='-Nfontsize=10 -Nwidth=".2" -Nheight=".2" -Nmargin=0 -Gfontsize=8')
-    #     A.draw('test.png')
-    #     plt.show()
+        plt.show(block = False)
+        plt.savefig(path, format='PNG')
 
     def printEdges(self):
         #Prints edges of diTree
@@ -78,8 +78,57 @@ class CausalDataGenerator:
                 return False
 
         return True
+
+    # 1. generate X with nodes from orderednodelist range(len(orderednodelist) - 1)
+    # 2. set T = [00...0] and generate Y0
+    # 3. set T = [11..1] and generate Y1
+    # 4. make dataframe (X, Y0, Y1)
+    # NOTE: Y1  ~  Y, when T = [11...1]
+
+    def generateX(self, middleFunction, causalMechanism):
+
+        size = len(self.orderedNodeList)
+        for i in range(size - 1):
+            normalNoise = np.random.normal(size = self.sampleSize) # ~ N(0,1)
+            pos = self.orderedNodeList[i]
+            self.X[pos] += normalNoise
+            if not self.isRootNode(i):
+                for j in range(len(self.coeffMatrix[pos])):
+                    if self.coeffMatrix[i][j]!=0:
+                        self.X[pos] += self.coeffMatrix[pos][j]* middleFunction(self.X[j])
+
+            self.X[pos] = causalMechanism(self.X[pos])
+
+        self.outcomePos = self.orderedNodeList[-1]
+        YCoeffs = self.coeffMatrix[self.outcomePos]
+
+        noise = np.random.normal(size = self.sampleSize)
+        Y_ = noise
+        for i in range(len(YCoeffs)):
+            if self.coeffMatrix[self.outcomePos][i] != 0:
+                Y_ += self.coeffMatrix[self.outcomePos][i] * self.X[i] ** 2
+        self.Y0 = causalMechanism(Y_)
+        self.Y1 = causalMechanism(Y_ + random.randint(1,10) * np.ones(self.sampleSize))
+
+    def makeDataFrame(self):
+        self.df= pd.DataFrame(data= self.X.T, index=[str(i) for i in range(self.X.shape[1])], columns= ['X' + str(i) for i in range(self.X.shape[0])])
+        self.df.drop(columns= ['X' + str(self.outcomePos)], inplace= True)
+        self.df['Y0'] = self.Y0
+        self.df['Y1'] = self.Y1
+        self.saveDataFrame()
+        return self.df
         
-    def generateX(self):
+    def saveDataFrame(self):
+        path = self.resourcePath + '/main_folder'
+        if not os.path.exists(path):
+            os.mkdir(path)
+            os.mkdir(path + '/graphs')
+            os.mkdir(path + '/dataframes')
+        key = uuid.uuid4().hex
+        self.drawGeneratedGraph(path + f'/graphs/{key}.png')
+        csv = self.df.to_csv(path + f'/dataframes/{key}.csv')
+        
+    def generateCausalX(self):
         """
         Generates variables with creating linear equations using coeffMatrix. We mark one of the root nodes of diTree as 
         T(treatment) and one of the leaf nodes as Y(outcome). All other nodes we bring as observed data.
@@ -94,10 +143,10 @@ class CausalDataGenerator:
             if not self.isRootNode(i):
                 for j in range(len(self.coeffMatrix[i])):
                     if self.coeffMatrix[i][j]!=0:
-                        self.X_withTreatment[i]+=self.coeffMatrix[i][j]*self.X_withTreatment[j]
-                        self.X_withoutTreatment[i]+=self.coeffMatrix[i][j]*self.X_withoutTreatment[j]
+                        self.X_withTreatment[i] += self.coeffMatrix[i][j] * self.X_withTreatment[j]
+                        self.X_withoutTreatment[i]+=self.coeffMatrix[i][j] * self.X_withoutTreatment[j]
 
-    def makeDataFrames(self):
+    def makeCausalDataFrames(self):
         """
         Creates DataFrame with treated(T = [11..1]) outcome    
         """
@@ -109,7 +158,7 @@ class CausalDataGenerator:
         df_withoutTreatment= self.makeDataFrame(self.X_withoutTreatment)
         return (df_withTreatment, df_withoutTreatment)
     
-    def makeDataFrame(self, X):
+    def makeCausalDataFrame(self, X):
         """
         Creates DataFrame from ndarray
         """
@@ -122,10 +171,17 @@ class CausalDataGenerator:
             else:
                 clmns.append('X' + str(i))
         
-        df= pd.DataFrame(data=X.T, index=[str(i) for i in range(X.shape[1])], columns= clmns) # ['X' + str(i) for i in range(self.X_withTreatment.shape[0])]
-        return df
+        df1 = pd.DataFrame(data=X.T, index=[str(i) for i in range(X.shape[1])], columns= clmns) # ['X' + str(i) for i in range(self.X_withTreatment.shape[0])]
+        return df1
 
-    def generateDataFrame(self):
+    def generateDataFrame(self, middleFunction, causalFunction):
+        self.makeDiTree()
+        self.generateCoeffMatrix()
+        self.orderNodesTopologically()
+        self.generateX(middleFunction, causalFunction)
+        return self.makeDataFrame()
+
+    def generateCausalDataFrame(self):
         """
         1. directional tree generation
         2. coefficient matrix for creating equations(equations are defined using that matrix)
@@ -136,5 +192,5 @@ class CausalDataGenerator:
         self.makeDiTree() #1
         self.generateCoeffMatrix() #2
         self.orderNodesTopologically() #3
-        self.generateX() #4
-        return self.makeDataFrames() #5
+        self.generateCausalX() #4
+        return self.makeCausalDataFrames() #5
