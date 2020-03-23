@@ -30,7 +30,7 @@ class CausalDataGenerator:
         topologically sorted nodes of diTree (cause we want to generate some Xi before its descendants)
     """
 
-    def __init__(self,resourcePath, nodeCount = 5, sampleSize = 10):
+    def __init__(self, resourcePath, nodeCount = 5, sampleSize = 10):
         self.resourcePath = resourcePath
         self.nodeCount = nodeCount
         self.sampleSize = sampleSize
@@ -51,20 +51,30 @@ class CausalDataGenerator:
 
     def drawGeneratedGraph(self, path):
         #Plots diTree
-        nx.draw(self.diTree, with_labels = True)
+        node_colors = []
+        for node in self.diTree.nodes():
+            if node == 'Y':
+                node_colors.append('green')
+            elif node == 'T':
+                node_colors.append('red')
+            else:
+                node_colors.append('blue')
+        
+        # pos = graphviz_layout(self.diTree, prog='dot')
+        nx.draw(self.diTree, with_labels = True, node_color = node_colors)
+        
         plt.show(block = False)
         plt.savefig(path, format='PNG')
 
     def printEdges(self):
         #Prints edges of diTree
-
         for pair in list(self.diTree.edges):
             print(pair[0],pair[1])
     
     def generateCoeffMatrix(self):
         #Generates coeffMatrix
         for pair in list(self.diTree.edges):
-            self.coeffMatrix[pair[1]][pair[0]] = random.randint(1,10)
+            self.coeffMatrix[pair[1]][pair[0]] = random.uniform(0.00001, 10.0)
 
     def orderNodesTopologically(self):
         #Sorts diTree nodes topologically
@@ -76,8 +86,17 @@ class CausalDataGenerator:
         for coeff in row:
             if coeff != 0:
                 return False
-
         return True
+
+    def addTreatmentNode(self):
+        mapping = {self.orderedNodeList[-1] : 'Y'}
+        nx.relabel_nodes(self.diTree, mapping, copy= False)
+        treatmentEdge = ('T', 'Y')
+        self.diTree.add_edge(*treatmentEdge)
+    
+    def colorGraph(self):
+        self.diTree.nodes['T']['color'] = '#ff0000'
+        self.diTree.nodes['Y']['color'] = '#00ff00'
 
     # 1. generate X with nodes from orderednodelist range(len(orderednodelist) - 1)
     # 2. set T = [00...0] and generate Y0
@@ -107,8 +126,9 @@ class CausalDataGenerator:
         for i in range(len(YCoeffs)):
             if self.coeffMatrix[self.outcomePos][i] != 0:
                 Y_ += self.coeffMatrix[self.outcomePos][i] * self.X[i] ** 2
-        self.Y0 = causalMechanism(Y_)
-        self.Y1 = causalMechanism(Y_ + random.randint(1,10) * np.ones(self.sampleSize))
+        randomTCoeff = random.uniform(0.00001, 10.0)
+        self.Y0 = causalMechanism(Y_ + randomTCoeff * middleFunction(np.zeros(self.sampleSize)))
+        self.Y1 = causalMechanism(Y_ + randomTCoeff * middleFunction(np.ones(self.sampleSize)))
 
     def makeDataFrame(self):
         self.df= pd.DataFrame(data= self.X.T, index=[str(i) for i in range(self.X.shape[1])], columns= ['X' + str(i) for i in range(self.X.shape[0])])
@@ -148,7 +168,7 @@ class CausalDataGenerator:
 
     def makeCausalDataFrames(self):
         """
-        Creates DataFrame with treated(T = [11..1]) outcome    
+        Creates DataFrame with treated(T = [11..1]) outcome
         """
         df_withTreatment= self.makeDataFrame(self.X_withTreatment)
 
@@ -178,7 +198,10 @@ class CausalDataGenerator:
         self.makeDiTree()
         self.generateCoeffMatrix()
         self.orderNodesTopologically()
+        # --- add func
         self.generateX(middleFunction, causalFunction)
+        self.addTreatmentNode()
+        # self.colorGraph()
         return self.makeDataFrame()
 
     def generateCausalDataFrame(self):
