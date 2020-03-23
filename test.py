@@ -11,15 +11,17 @@ RESOURCE_PATH = '/Users/narekghukasyan/Desktop'
 GRAPH_SIZE = 10
 SAMPLE_SIZE = 1000
 
-def sigmoid(self, row): # [sigmoid(a1), sigmoid(a2), ... ]  <- X[i] = [a1, a2, .. ]
+def sigmoid(row):
     return 1/(1 + np.exp(-row))
 
-def same(self, X):
+def same(X):
     return X
 
 generator = CausalDataGenerator(resourcePath = RESOURCE_PATH, nodeCount= GRAPH_SIZE, sampleSize= SAMPLE_SIZE)
 
-df = generator.generateDataFrame(np.square, generator.sigmoid)
+# df = generator.generateDataFrame(sigmoid, same)
+# df = generator.generateDataFrame(np.square, same)
+df = generator.generateDataFrame(np.tanh, same)
 # t = generator.generateDataFrame()
 # g = generator.generateTanhDataFrame()
 
