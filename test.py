@@ -11,19 +11,33 @@ RESOURCE_PATH = '/Users/narekghukasyan/Desktop'
 GRAPH_SIZE = 10
 SAMPLE_SIZE = 1000
 
-def sigmoid(self, row): # [sigmoid(a1), sigmoid(a2), ... ]  <- X[i] = [a1, a2, .. ]
+def sigmoid(row):
     return 1/(1 + np.exp(-row))
 
-def same(self, X):
+def same(X):
     return X
 
 generator = CausalDataGenerator(resourcePath = RESOURCE_PATH, nodeCount= GRAPH_SIZE, sampleSize= SAMPLE_SIZE)
 
-df = generator.generateDataFrame(np.square, generator.sigmoid)
-# t = generator.generateDataFrame()
-# g = generator.generateTanhDataFrame()
+#1 df = generator.generateDataFrame(same, sigmoid)
+#2 df = generator.generateDataFrame(np.tanh, sigmoid)
+#3 df = generator.generateDataFrame(sigmoid, sigmoid)
 
-print("X")
-print(df.head())
-# print("########################################################################")
-# print("########################################################################")
+df = generator.generateDataFrame(sigmoid, sigmoid)
+print('--------------------------------------------------------------------------------')
+print('DataFrame')
+print(df)
+print('--------------------------------------------------------------------------------')
+print('--------------------------------------------------------------------------------')
+print('\n')
+print('ATE')
+ate = (df['Y1'] - df['Y0']).mean()
+print(ate)
+print('--------------------------------------------------------------------------------')
+print('\n')
+print('E[Y1]')
+print(df['Y1'].mean())
+print('--------------------------------------------------------------------------------')
+print('\n')
+print('E[Y0]')
+print(df['Y0'].mean())
