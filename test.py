@@ -19,7 +19,6 @@ def same(X):
 
 generator = CausalDataGenerator(resourcePath = RESOURCE_PATH, nodeCount= GRAPH_SIZE, sampleSize= SAMPLE_SIZE)
 
-<<<<<<< HEAD
 #1 df = generator.generateDataFrame(same, sigmoid)
 #2 df = generator.generateDataFrame(np.tanh, sigmoid)
 #3 df = generator.generateDataFrame(sigmoid, sigmoid)
@@ -42,15 +41,4 @@ print('-------------------------------------------------------------------------
 print('\n')
 print('E[Y0]')
 print(df['Y0'].mean())
-=======
-# df = generator.generateDataFrame(sigmoid, same)
-# df = generator.generateDataFrame(np.square, same)
-df = generator.generateDataFrame(np.tanh, same)
-# t = generator.generateDataFrame()
-# g = generator.generateTanhDataFrame()
 
-print("X")
-print(df.head())
-# print("########################################################################")
-# print("########################################################################")
->>>>>>> 7831e958ad4f31330fdfb45b3cd4db53481d90ed
