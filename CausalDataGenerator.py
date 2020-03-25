@@ -74,7 +74,11 @@ class CausalDataGenerator:
     def generateCoeffMatrix(self):
         #Generates coeffMatrix
         for pair in list(self.diTree.edges):
+<<<<<<< HEAD
             self.coeffMatrix[pair[1]][pair[0]] = random.uniform(-1.0, 1.0)
+=======
+            self.coeffMatrix[pair[1]][pair[0]] = random.uniform(0.00001, 10.0)
+>>>>>>> 7831e958ad4f31330fdfb45b3cd4db53481d90ed
 
     def orderNodesTopologically(self):
         #Sorts diTree nodes topologically
@@ -122,6 +126,7 @@ class CausalDataGenerator:
         Y_ = noise
         for i in range(len(YCoeffs)):
             if self.coeffMatrix[self.outcomePos][i] != 0:
+<<<<<<< HEAD
                 Y_ += self.coeffMatrix[self.outcomePos][i] * middleFunction(self.X[i])
         randomTCoeff = np.random.normal(0,5,self.sampleSize) # N(0,5)
         # randomTCoeff = np.random.exponential(1.5,self.sampleSize)
@@ -141,6 +146,12 @@ class CausalDataGenerator:
 
         # y0 = yi + (-5) * 0.5
         # y1 = yi + (-5) * 0.75
+=======
+                Y_ += self.coeffMatrix[self.outcomePos][i] * self.X[i] ** 2
+        randomTCoeff = random.uniform(0.00001, 10.0)
+        self.Y0 = causalMechanism(Y_ + randomTCoeff * middleFunction(np.zeros(self.sampleSize)))
+        self.Y1 = causalMechanism(Y_ + randomTCoeff * middleFunction(np.ones(self.sampleSize)))
+>>>>>>> 7831e958ad4f31330fdfb45b3cd4db53481d90ed
 
     def makeDataFrame(self):
         self.df= pd.DataFrame(data= self.X.T, index=[str(i) for i in range(self.X.shape[1])], columns= ['X' + str(i) for i in range(self.X.shape[0])])
