@@ -74,7 +74,7 @@ class CausalDataGenerator:
     def generateCoeffMatrix(self):
         #Generates coeffMatrix
         for pair in list(self.diTree.edges):
-            self.coeffMatrix[pair[1]][pair[0]] = random.uniform(-1.0, 1.0)
+            self.coeffMatrix[pair[1]][pair[0]] = random.normalvariate(0, 5) #random.uniform(-1.0, 1.0)
 
     def orderNodesTopologically(self):
         #Sorts diTree nodes topologically
