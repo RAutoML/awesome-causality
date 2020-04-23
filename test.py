@@ -53,7 +53,7 @@ uniform_4_10 = np.random.uniform(4, 10, size = SAMPLE_SIZE)
 noiseArray = [normalNoise_0_1, normalNoise_0_1, normalNoise_2_5, beta_1_3, uniform_4_10]
 mfArray = [np.tanh, relu, same, same, same]
 cMArray = [np.tanh, relu, relu, same, same]
-df = generator.generateDataFrame(4, mfArray , cMArray, noiseArray)
+df = generator.generateDataFrame(4, mfArray , cMArray, noiseArray, ['#3355FF', '#E933FF', '#FF9F33', '#FFF933', '#33FFE3'])
 
 print('--------------------------------------------------------------------------------')
 

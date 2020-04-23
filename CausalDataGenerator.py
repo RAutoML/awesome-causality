@@ -49,16 +49,23 @@ class CausalDataGenerator:
         self.diTree = H
         return H
 
-    def drawGeneratedGraph(self, path):
+    def drawGeneratedGraph(self, path, colorArray):
         #Plots diTree
         node_colors = []
+        chunkCount = len(colorArray) - 1
+        # orderednodelist[0:-1]
+        chunckSize = (len(self.orderedNodeList) - 1) // chunkCount
+        # for i in range(len(self.orderedNodeList[:-1])):
+        #     node_colors.append(colorArray[i//chunckSize])
         for node in self.diTree.nodes():
             if node == 'Y':
                 node_colors.append('green')
             elif node == 'T':
                 node_colors.append('red')
             else:
-                node_colors.append('blue')
+                pos = self.orderedNodeList.index(node)
+                clr = colorArray[pos//chunckSize]
+                node_colors.append(clr)
         
         # pos = graphviz_layout(self.diTree, prog='dot')
         nx.draw(self.diTree, with_labels = True, node_color = node_colors)
@@ -147,22 +154,22 @@ class CausalDataGenerator:
         # y0 = yi + (-5) * 0.5
         # y1 = yi + (-5) * 0.75
 
-    def makeDataFrame(self):
+    def makeDataFrame(self, colorArray):
         self.df= pd.DataFrame(data= self.X.T, index=[str(i) for i in range(self.X.shape[1])], columns= ['X' + str(i) for i in range(self.X.shape[0])])
         self.df.drop(columns= ['X' + str(self.outcomePos)], inplace= True)
         self.df['Y0'] = self.Y0
         self.df['Y1'] = self.Y1
-        self.saveDataFrame()
+        self.saveDataFrame(colorArray)
         return self.df
         
-    def saveDataFrame(self):
+    def saveDataFrame(self, colorArray):
         path = self.resourcePath + '/main_folder'
         if not os.path.exists(path):
             os.mkdir(path)
             os.mkdir(path + '/graphs')
             os.mkdir(path + '/dataframes')
         key = uuid.uuid4().hex
-        self.drawGeneratedGraph(path + f'/graphs/{key}.png')
+        self.drawGeneratedGraph(path + f'/graphs/{key}.png', colorArray)
         csv = self.df.to_csv(path + f'/dataframes/{key}.csv')
         
     def generateCausalX(self):
@@ -211,7 +218,7 @@ class CausalDataGenerator:
         df1 = pd.DataFrame(data=X.T, index=[str(i) for i in range(X.shape[1])], columns= clmns) # ['X' + str(i) for i in range(self.X_withTreatment.shape[0])]
         return df1
 
-    def generateDataFrame(self, chunkCount, middleFunctionArray, causalFunctionArray, noiseArray):
+    def generateDataFrame(self, chunkCount, middleFunctionArray, causalFunctionArray, noiseArray, colorArray):
         self.makeDiTree()
         self.generateCoeffMatrix()
         self.orderNodesTopologically()
@@ -219,7 +226,7 @@ class CausalDataGenerator:
         self.generateX(chunkCount, middleFunctionArray, causalFunctionArray, noiseArray)
         self.addTreatmentNode()
         # self.colorGraph()
-        return self.makeDataFrame()
+        return self.makeDataFrame(colorArray)
 
     def generateCausalDataFrame(self):
         """
