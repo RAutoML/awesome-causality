@@ -34,8 +34,8 @@ class CausalDataGenerator:
         self.resourcePath = resourcePath
         self.nodeCount = nodeCount
         self.sampleSize = sampleSize
-        self.coeffMatrix = np.zeros((self.nodeCount, self.nodeCount))
-        self.X = np.zeros((nodeCount, sampleSize))
+        self.coeffMatrix = np.zeros((self.nodeCount + 1, self.nodeCount + 1))
+        self.X = np.zeros((nodeCount + 1, sampleSize))
         self.X_withTreatment = np.zeros((nodeCount, sampleSize))
         self.X_withoutTreatment = np.zeros((nodeCount, sampleSize))
 
@@ -45,8 +45,20 @@ class CausalDataGenerator:
         """
         G = nx.random_tree(self.nodeCount) # dag X1->..->X1
         H = nx.DiGraph([(u,v) for (u,v) in G.edges() if u<v])
-
         self.diTree = H
+        self.generateCoeffMatrix()
+        new_root_node = (H.number_of_nodes())
+        H.add_node(new_root_node)
+        self.orderNodesTopologically()
+        print(list(nx.topological_sort(H)))
+#        print(H.number_of_nodes())
+        for i in list(self.orderedNodeList)[1:]:
+            if self.isRootNode(i):
+                print(f'X{i}' + ' is root node ')
+                new_edge = (new_root_node, i)
+                self.diTree.add_edge(*new_edge)
+                print('added new edge from ' + f'{new_root_node}' + ' ' + f'{i}')
+        self.generateCoeffMatrix()
         return H
 
     def drawGeneratedGraph(self, path, colorArray):
@@ -114,16 +126,21 @@ class CausalDataGenerator:
     def generateX(self, chunkCount, middleFunction, causalMechanism, noiseArray):
         size = len(self.orderedNodeList) # [0:5], [5:10] .. [n-6, n]
         chunckSize = (size - 1) // chunkCount # 1 2 .. 7  7 * 14 = 98 99/ 14 ~ 7.1 100/14 = 7.6
+        root_node_counts = 0
+        root_nodes_list = []
         for i in range(size - 1):
             pos = self.orderedNodeList[i]
+            if self.isRootNode(pos):
+                root_node_counts += 1
+                root_nodes_list.append(f'x {pos} is root')
             self.X[pos] += noiseArray[i // chunckSize]
             # X[pos] = cm[i/chunckSize](PA)
             # n/k == ktorSize, i/ ktorSize
             # r(i) -> ktorNum
             # switch(i) ktorNum =  i    mF(ktorNum) cM(ktorNum)
-            if not self.isRootNode(i):
+            if not self.isRootNode(pos):
                 for j in range(len(self.coeffMatrix[pos])):
-                    if self.coeffMatrix[i][j]!=0:
+                    if self.coeffMatrix[pos][j]!=0:
                         self.X[pos] += self.coeffMatrix[pos][j] * middleFunction[i // chunckSize](self.X[j])
 
             self.X[pos] = causalMechanism[i//chunckSize](self.X[pos])
@@ -153,6 +170,8 @@ class CausalDataGenerator:
 
         # y0 = yi + (-5) * 0.5
         # y1 = yi + (-5) * 0.75
+        print('root node count in our case' + ' ' + f'{root_node_counts}')
+        print(root_nodes_list)
 
     def makeDataFrame(self, colorArray):
         self.df= pd.DataFrame(data= self.X.T, index=[str(i) for i in range(self.X.shape[1])], columns= ['X' + str(i) for i in range(self.X.shape[0])])
@@ -220,7 +239,7 @@ class CausalDataGenerator:
 
     def generateDataFrame(self, chunkCount, middleFunctionArray, causalFunctionArray, noiseArray, colorArray):
         self.makeDiTree()
-        self.generateCoeffMatrix()
+        #self.generateCoeffMatrix()
         self.orderNodesTopologically()
         # --- add func
         self.generateX(chunkCount, middleFunctionArray, causalFunctionArray, noiseArray)

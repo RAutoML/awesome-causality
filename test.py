@@ -1,4 +1,3 @@
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -7,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from CausalDataGenerator import CausalDataGenerator
 
-RESOURCE_PATH = '/Users/narekghukasyan/Desktop'
+RESOURCE_PATH = 'C:\\Users\\Arman\\Desktop'
 GRAPH_SIZE = 10
 SAMPLE_SIZE = 10000
 
@@ -79,9 +78,7 @@ print('std(Y1)')
 print(df['Y1'].std())
 print('--------------------------------------------------------------------------------')
 print('\n')
-
 print('E[Y0]')
 print(df['Y0'].mean())
 print('std(Y0)')
 print(df['Y0'].std())
-
